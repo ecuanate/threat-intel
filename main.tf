@@ -2,37 +2,39 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# Insecure S3 bucket: Public read access, versioning disabled.
-resource "aws_s3_bucket" "bad_bucket" {
-  bucket        = "bad-bucket-example"
-  acl           = "public-read"  # Allows public read access.
-  force_destroy = true
+##############################
+# 1. Insecure S3 Bucket
+##############################
+# This S3 bucket is configured with a public-read-write ACL and
+# has website hosting enabled. Public write access may allow unauthorized changes.
+resource "aws_s3_bucket" "insecure_bucket" {
+  bucket = "insecure-bucket-example"
+  acl    = "public-read-write"  # Allows public read and write access.
 
   versioning {
-    enabled = false
+    enabled = true
   }
-  
-  # Although encryption is configured here, the public ACL is still a risk.
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-    }
+
+  website {
+    index_document = "index.html"
+    error_document = "error.html"
   }
 }
 
-# Insecure Security Group: Allows all inbound traffic on all TCP ports.
-resource "aws_security_group" "bad_sg" {
-  name        = "bad-sg"
-  description = "Security group with overly permissive inbound rules"
-  vpc_id      = "vpc-12345678"  # Replace with your actual VPC ID.
+##############################
+# 2. Open Security Group
+##############################
+# This security group allows SSH (port 22) access from any IP address.
+resource "aws_security_group" "insecure_sg" {
+  name        = "insecure-sg"
+  description = "Security group with open SSH access"
+  vpc_id      = "vpc-12345678"  # Replace with a valid VPC ID.
 
   ingress {
-    from_port   = 0
-    to_port     = 65535
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Open to the world.
+    cidr_blocks = ["0.0.0.0/0"]  # Open to the entire internet.
   }
 
   egress {
@@ -43,57 +45,88 @@ resource "aws_security_group" "bad_sg" {
   }
 }
 
-# Insecure EC2 Instance: Contains hardcoded secrets in user data.
-resource "aws_instance" "bad_instance" {
-  ami           = "ami-0c55b159cbfafe1f0"  # Example AMI; update as needed.
-  instance_type = "t2.micro"
-  key_name      = "bad-key"  # Replace with your key pair.
-
-  vpc_security_group_ids = [aws_security_group.bad_sg.id]
-
-  user_data = <<-EOF
-    #!/bin/bash
-    echo "username=admin" >> /etc/config.conf
-    echo "password=SuperSecret123" >> /etc/config.conf  # Hardcoded credentials.
-  EOF
+##############################
+# 3. Misconfigured RDS Instance
+##############################
+# This RDS instance is publicly accessible and lacks storage encryption,
+# which could expose sensitive data.
+resource "aws_db_instance" "insecure_rds" {
+  allocated_storage    = 20
+  engine               = "mysql"
+  engine_version       = "8.0"
+  instance_class       = "db.t2.micro"
+  name                 = "insecuredb"
+  username             = "admin"
+  password             = "SuperSecretPassword"
+  parameter_group_name = "default.mysql8.0"
+  skip_final_snapshot  = true
+  publicly_accessible  = true   # Public access enabled.
+  storage_encrypted    = false  # Data is not encrypted at rest.
 }
 
-# Insecure IAM Role: Role that can be assumed by EC2.
-resource "aws_iam_role" "bad_role" {
-  name = "bad-role"
+##############################
+# 4. Overly Permissive IAM User
+##############################
+# This IAM user has an inline policy that allows all actions on all resources.
+resource "aws_iam_user" "insecure_user" {
+  name = "insecure-user"
+}
 
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "ec2.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
+resource "aws_iam_user_policy" "insecure_policy" {
+  name = "insecure-policy"
+  user = aws_iam_user.insecure_user.name
+
+  policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [
+      {
+        Action   = "*"
+        Effect   = "Allow"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+##############################
+# 5. Insecure Lambda Function
+##############################
+# This Lambda function uses environment variables to store secrets in plain text.
+resource "aws_lambda_function" "insecure_lambda" {
+  filename         = "lambda_function_payload.zip"  # Ensure this file exists in your working directory.
+  function_name    = "insecure_lambda_function"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs14.x"
+  source_code_hash = filebase64sha256("lambda_function_payload.zip")
+
+  environment {
+    variables = {
+      SECRET_KEY = "insecure-secret-key"
+      API_TOKEN  = "insecure-api-token"
     }
-  ]
-}
-EOF
+  }
 }
 
-# Insecure IAM Policy: Grants full permissions on all resources.
-resource "aws_iam_role_policy" "bad_policy" {
-  name = "bad-policy"
-  role = aws_iam_role.bad_role.id
+# IAM role for Lambda execution.
+resource "aws_iam_role" "lambda_role" {
+  name = "lambda-execution-role"
 
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "*",
-      "Effect": "Allow",
-      "Resource": "*"
-    }
-  ]
+  assume_role_policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [
+      {
+        Action    = "sts:AssumeRole"
+        Effect    = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
 }
-EOF
+
+resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
