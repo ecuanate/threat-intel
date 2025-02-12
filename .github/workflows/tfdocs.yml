@@ -1,0 +1,81 @@
+# name: tfsec
+
+# on:
+#   push:
+#     branches: [ "main", "pull-request" ]
+#   pull_request:
+#     branches: [ "main" ]
+
+# jobs:   
+#   tfdocs:
+#       name: Create Summary Comment
+#       runs-on: ubuntu-latest
+#       permissions:
+#         contents: 'write'
+#         id-token: 'write'
+#         issues: 'write'
+#         pull-requests: 'write'    
+#       steps:
+#         - name: Checkout Repository
+#           uses: actions/checkout@v3
+#           with:
+#             token: ${{ secrets.PAT_TOKEN }}
+#             ref: ${{ github.head_ref }}
+#             fetch-depth: 0
+#             persist-credentials: true
+
+#         - name: Download Project Factory Dev Plan
+#           uses: actions/download-artifact@v3
+#           with:
+#             name: project_factory_dev
+#             path: ./plans/projectfactorydev
+
+#         - name: Download Project Factory Prod Plan
+#           uses: actions/download-artifact@v3
+#           with:
+#             name: project_factory_prod
+#             path: ./plans/projectfactoryprod
+
+#         - name: Render Terraform Docs for Dev
+#           uses: terraform-docs/gh-actions@main
+#           with:
+#             working-dir: ./fast/stages/3-project-factory/dev
+#             output-file: README.md
+#             output-method: inject
+#             git-push: "false"
+#             config-file: ../.terraform-docs.yml
+
+#         - name: Render Terraform Docs for Prod
+#           uses: terraform-docs/gh-actions@main
+#           with:
+#             working-dir: ./fast/stages/3-project-factory/prod
+#             output-file: README.md
+#             output-method: inject
+#             git-push: "false"
+#             config-file: ../.terraform-docs.yml
+
+#         - name: Validate File Permissions
+#           run: chmod -R u+rwX ./fast/stages/3-project-factory
+
+#         - name: Set up Git user
+#           run: |
+#             git config user.name "${{ secrets.USER_NAME }}"
+#             git config user.email "${{ secrets.USER_EMAIL }}"
+#             git config commit.gpgSign true
+#             echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+#             KEY_ID=$(gpg --batch --list-secret-keys --keyid-format=long | grep sec | awk '{print $2}' | cut -d'/' -f2)
+#             if [ -z "$KEY_ID" ]; then
+#               echo "GPG key import failed."
+#               exit 1
+#             fi
+#             git config user.signingkey "$KEY_ID"
+
+#         - name: Commit changes
+#           run: |
+#             git add ./fast/stages/3-project-factory/dev ./fast/stages/3-project-factory/prod
+#             if git diff --cached --quiet; then
+#               echo "No changes detected. Skipping commit."
+#             else
+#               git commit -S -m "Update plans and docs"
+#               git push origin HEAD
+#             fi
