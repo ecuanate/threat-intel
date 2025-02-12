@@ -37,28 +37,28 @@ jobs:
     #     role-session-name: aws-s3-buckets-state-role
     #     aws-region: eu-west-2
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3.0.0
-      with:
-        terraform_version: '1.5.7'
+    # - name: Setup Terraform
+    #   uses: hashicorp/setup-terraform@v3.0.0
+    #   with:
+    #     terraform_version: '1.5.7'
 
-    - name: Terraform Initialize
-      run: terraform init
-      id: init
+    # - name: Terraform Initialize
+    #   run: terraform init
+    #   id: init
 
-    # - name: Terraform Format
-    #   run: terraform fmt -check
-    #   id: fmt
+    # # - name: Terraform Format
+    # #   run: terraform fmt -check
+    # #   id: fmt
 
-    # - name: Terraform Validate
-    #   run: terraform validate
-    #   id: validate
+    # # - name: Terraform Validate
+    # #   run: terraform validate
+    # #   id: validate
 
-    - name: Terraform Plan
-      run: |
-        terraform plan -out=tfplan.tmp
-        terraform show -no-color tfplan.tmp > tfplan.out
-      id: plan 
+    # - name: Terraform Plan
+    #   run: |
+    #     terraform plan -out=tfplan.tmp
+    #     terraform show -no-color tfplan.tmp > tfplan.out
+    #   id: plan 
 
     - name: Render All Environments Terraform Docs
       uses: terraform-docs/gh-actions@main
