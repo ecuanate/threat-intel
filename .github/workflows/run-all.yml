@@ -72,18 +72,22 @@ jobs:
       run: |
         git config user.name "${{ secrets.USER_NAME }}"
         git config user.email "${{ secrets.USER_EMAIL }}"
-        # Enable GPG signing
         git config commit.gpgSign true
-        
-        # Configure GPG to use loopback pinentry mode
+
+        # 1. Create the ~/.gnupg directory if missing, and set correct permissions
+        mkdir -p ~/.gnupg
+        chmod 700 ~/.gnupg
+
+        # 2. Append pinentry-mode to gpg.conf so GPG can accept passphrase via loopback
         echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-        
-        # Import the GPG key (passphrase-protected)
+
+        # 3. Import your GPG private key in loopback mode
         echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --import
 
-        # Retrieve the key ID
+        # 4. Retrieve the key ID, then configure Git to sign with that key
         GPG_KEY_ID="$(gpg --list-secret-keys --keyid-format=long | grep sec | head -n 1 | awk '{print $2}' | cut -d'/' -f2)"
         git config user.signingkey "${GPG_KEY_ID}"
+
 
     - name: Commit changes
       run: |
