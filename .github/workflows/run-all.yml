@@ -1,0 +1,187 @@
+name: Terraform plan/apply
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  Terraform: 
+    name: 'Terraform' 
+    runs-on: ubuntu-latest
+    environment: terraform
+
+    steps:
+    - name: Git clone the repository
+      uses: actions/checkout@v4.1.1
+      with:
+        token: ${{ secrets.PAT_TOKEN }}
+        ref: ${{ github.event.pull_request.head.ref }}
+        fetch-depth: 0
+        persist-credentials: true
+
+    # - name: Configure AWS Credentials
+    #   uses: aws-actions/configure-aws-credentials@v4.0.1
+    #   with:
+    #     role-to-assume: arn:aws:iam::CREDENTIALNUMBER:role/aws-s3-buckets-state-role 
+    #     role-session-name: aws-s3-buckets-state-role
+    #     aws-region: eu-west-2
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3.0.0
+      with:
+        terraform_version: '1.5.7'
+
+    - name: Terraform Initialize
+      run: terraform init
+      id: init
+
+    - name: Terraform Format
+      run: terraform fmt -check
+      id: fmt
+
+    - name: Terraform Validate
+      run: terraform validate
+      id: validate
+
+    - name: Terraform Plan
+      run: |
+        terraform plan -out=tfplan.tmp
+        terraform show -no-color tfplan.tmp > tfplan.out
+      id: plan 
+
+    - name: Render All Environments Terraform Docs
+      uses: terraform-docs/gh-actions@main
+      with:
+        working-dir: .
+        output-file: README.md
+        output-method: inject
+        git-push: "false"
+
+    - name: Set up Git user and GPG for signing commits
+      run: |
+        git config user.name "${{ secrets.USER_NAME }}"
+        git config user.email "${{ secrets.USER_EMAIL }}"
+        git config commit.gpgSign true
+        echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+        gpg --batch --list-keys
+        git config user.signingkey "$(gpg --batch --list-secret-keys --keyid-format=long | grep sec | head -n 1 | awk '{print $2}' | cut -d'/' -f2)"
+    
+    - name: Commit changes
+      run: |
+        # Ensure the .git directory is writable and reset ownership
+        sudo chmod -R u+w .git
+        sudo chown -R $(whoami):$(whoami) .
+
+        # Add and commit changes
+        git add ./README.md
+        
+        if git diff --cached --quiet; then
+          echo "No changes detected. Skipping commit."
+        else
+          git commit -S -m "Update plans and docs"
+          git push origin HEAD
+        fi
+
+    
+    - name: Terraform Apply
+      if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
+      run: terraform apply -auto-approve
+
+    - name: Print Assumed Role
+      run: aws sts get-caller-identity    
+
+    - name: Create Summary Comment
+      uses: actions/github-script@v6
+      if: github.event_name == 'pull_request'
+      env:
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      with:
+        github-token: ${{ secrets.PAT_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          const planFilePath = path.join(process.env.GITHUB_WORKSPACE, 'tfplan.out');
+          const summaryTitle = 'Terraform Plan Summary';
+
+          function extractCounts(planContent) {
+            const createMatch = planContent.match(/Plan:\s+(\d+)\s+to add/);
+            const updateMatch = planContent.match(/(\d+)\s+to change/);
+            const deleteMatch = planContent.match(/(\d+)\s+to destroy/);
+
+            return {
+              create: createMatch ? parseInt(createMatch[1], 10) : 0,
+              update: updateMatch ? parseInt(updateMatch[1], 10) : 0,
+              delete: deleteMatch ? parseInt(deleteMatch[1], 10) : 0,
+            };
+          }
+
+          let fullComment = ### ${summaryTitle}\n\n;
+
+          if (!fs.existsSync(planFilePath)) {
+            console.warn(Plan file not found: ${planFilePath});
+            fullComment += **Plan File:** *Plan file not found.*\n\n;
+          } else {
+            const planContent = fs.readFileSync(planFilePath, 'utf8');
+            const truncatedPlan = planContent.length > 65000
+              ? planContent.substring(0, 65000) + " ..."
+              : planContent;
+
+            const counts = extractCounts(planContent);
+
+            const summary = \\\
+            Create: ${counts.create}
+            Update: ${counts.update}
+            Delete: ${counts.delete}
+            \\\
+            ;
+
+            fullComment += ${summary}\n<details><summary>Show Plan Details</summary>\n\n\\\\n${truncatedPlan}\n\\\\n</details>\n;
+          }
+
+          const runUrl = ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID};
+          const runLink = <a href="${runUrl}">View full logs here</a>;
+          const truncatedMessage = fullComment.length > 65000
+            ? Some plan outputs were truncated. ${runLink}<br /><br />
+            : "";
+
+          fullComment += ${truncatedMessage}\n*Pusher: @${context.actor}, Action: \${context.eventName}\, Workflow: \${context.workflow}\*\n\n<!-- terraform-summary-comment -->;
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existingComment = comments.find(comment =>
+            comment.user.type === 'Bot' && comment.body.includes('<!-- terraform-summary-comment -->')
+          );
+
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: fullComment,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: fullComment,
+            });
+          }
