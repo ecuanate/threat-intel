@@ -72,11 +72,19 @@ jobs:
       run: |
         git config user.name "${{ secrets.USER_NAME }}"
         git config user.email "${{ secrets.USER_EMAIL }}"
+        # Enable GPG signing
         git config commit.gpgSign true
-        echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-        gpg --batch --list-keys
-        git config user.signingkey "$(gpg --batch --list-secret-keys --keyid-format=long | grep sec | head -n 1 | awk '{print $2}' | cut -d'/' -f2)"
-    
+        
+        # Configure GPG to use loopback pinentry mode
+        echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+        
+        # Import the GPG key (passphrase-protected)
+        echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --import
+
+        # Retrieve the key ID
+        GPG_KEY_ID="$(gpg --list-secret-keys --keyid-format=long | grep sec | head -n 1 | awk '{print $2}' | cut -d'/' -f2)"
+        git config user.signingkey "${GPG_KEY_ID}"
+
     - name: Commit changes
       run: |
         # Ensure the .git directory is writable and reset ownership
