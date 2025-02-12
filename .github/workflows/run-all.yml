@@ -94,94 +94,94 @@ jobs:
         fi
 
     
-    - name: Terraform Apply
-      if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
-      run: terraform apply -auto-approve
+    # - name: Terraform Apply
+    #   if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
+    #   run: terraform apply -auto-approve
 
     # - name: Print Assumed Role
     #   run: aws sts get-caller-identity    
 
-    # - name: Create Summary Comment
-      uses: actions/github-script@v6
-      if: github.event_name == 'pull_request'
-      env:
-        GITHUB_WORKSPACE: ${{ github.workspace }}
-        GITHUB_RUN_ID: ${{ github.run_id }}
-        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      with:
-        github-token: ${{ secrets.PAT_TOKEN }}
-        script: |
-          const fs = require('fs');
-          const path = require('path');
+    # # - name: Create Summary Comment
+    #   uses: actions/github-script@v6
+    #   if: github.event_name == 'pull_request'
+    #   env:
+    #     GITHUB_WORKSPACE: ${{ github.workspace }}
+    #     GITHUB_RUN_ID: ${{ github.run_id }}
+    #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+    #   with:
+    #     github-token: ${{ secrets.PAT_TOKEN }}
+    #     script: |
+    #       const fs = require('fs');
+    #       const path = require('path');
 
-          const planFilePath = path.join(process.env.GITHUB_WORKSPACE, 'tfplan.out');
-          const summaryTitle = 'Terraform Plan Summary';
+    #       const planFilePath = path.join(process.env.GITHUB_WORKSPACE, 'tfplan.out');
+    #       const summaryTitle = 'Terraform Plan Summary';
 
-          function extractCounts(planContent) {
-            const createMatch = planContent.match(/Plan:\s+(\d+)\s+to add/);
-            const updateMatch = planContent.match(/(\d+)\s+to change/);
-            const deleteMatch = planContent.match(/(\d+)\s+to destroy/);
+    #       function extractCounts(planContent) {
+    #         const createMatch = planContent.match(/Plan:\s+(\d+)\s+to add/);
+    #         const updateMatch = planContent.match(/(\d+)\s+to change/);
+    #         const deleteMatch = planContent.match(/(\d+)\s+to destroy/);
 
-            return {
-              create: createMatch ? parseInt(createMatch[1], 10) : 0,
-              update: updateMatch ? parseInt(updateMatch[1], 10) : 0,
-              delete: deleteMatch ? parseInt(deleteMatch[1], 10) : 0,
-            };
-          }
+    #         return {
+    #           create: createMatch ? parseInt(createMatch[1], 10) : 0,
+    #           update: updateMatch ? parseInt(updateMatch[1], 10) : 0,
+    #           delete: deleteMatch ? parseInt(deleteMatch[1], 10) : 0,
+    #         };
+    #       }
 
-          let fullComment = ### ${summaryTitle}\n\n;
+    #       let fullComment = ### ${summaryTitle}\n\n;
 
-          if (!fs.existsSync(planFilePath)) {
-            console.warn(Plan file not found: ${planFilePath});
-            fullComment += **Plan File:** *Plan file not found.*\n\n;
-          } else {
-            const planContent = fs.readFileSync(planFilePath, 'utf8');
-            const truncatedPlan = planContent.length > 65000
-              ? planContent.substring(0, 65000) + " ..."
-              : planContent;
+    #       if (!fs.existsSync(planFilePath)) {
+    #         console.warn(Plan file not found: ${planFilePath});
+    #         fullComment += **Plan File:** *Plan file not found.*\n\n;
+    #       } else {
+    #         const planContent = fs.readFileSync(planFilePath, 'utf8');
+    #         const truncatedPlan = planContent.length > 65000
+    #           ? planContent.substring(0, 65000) + " ..."
+    #           : planContent;
 
-            const counts = extractCounts(planContent);
+    #         const counts = extractCounts(planContent);
 
-            const summary = \\\
-            Create: ${counts.create}
-            Update: ${counts.update}
-            Delete: ${counts.delete}
-            \\\
-            ;
+    #         const summary = \\\
+    #         Create: ${counts.create}
+    #         Update: ${counts.update}
+    #         Delete: ${counts.delete}
+    #         \\\
+    #         ;
 
-            fullComment += ${summary}\n<details><summary>Show Plan Details</summary>\n\n\\\\n${truncatedPlan}\n\\\\n</details>\n;
-          }
+    #         fullComment += ${summary}\n<details><summary>Show Plan Details</summary>\n\n\\\\n${truncatedPlan}\n\\\\n</details>\n;
+    #       }
 
-          const runUrl = ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID};
-          const runLink = <a href="${runUrl}">View full logs here</a>;
-          const truncatedMessage = fullComment.length > 65000
-            ? Some plan outputs were truncated. ${runLink}<br /><br />
-            : "";
+    #       const runUrl = ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID};
+    #       const runLink = <a href="${runUrl}">View full logs here</a>;
+    #       const truncatedMessage = fullComment.length > 65000
+    #         ? Some plan outputs were truncated. ${runLink}<br /><br />
+    #         : "";
 
-          fullComment += ${truncatedMessage}\n*Pusher: @${context.actor}, Action: \${context.eventName}\, Workflow: \${context.workflow}\*\n\n<!-- terraform-summary-comment -->;
+    #       fullComment += ${truncatedMessage}\n*Pusher: @${context.actor}, Action: \${context.eventName}\, Workflow: \${context.workflow}\*\n\n<!-- terraform-summary-comment -->;
 
-          const { data: comments } = await github.rest.issues.listComments({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-          });
+    #       const { data: comments } = await github.rest.issues.listComments({
+    #         owner: context.repo.owner,
+    #         repo: context.repo.repo,
+    #         issue_number: context.issue.number,
+    #       });
 
-          const existingComment = comments.find(comment =>
-            comment.user.type === 'Bot' && comment.body.includes('<!-- terraform-summary-comment -->')
-          );
+    #       const existingComment = comments.find(comment =>
+    #         comment.user.type === 'Bot' && comment.body.includes('<!-- terraform-summary-comment -->')
+    #       );
 
-          if (existingComment) {
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: existingComment.id,
-              body: fullComment,
-            });
-          } else {
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: fullComment,
-            });
-          }
+    #       if (existingComment) {
+    #         await github.rest.issues.updateComment({
+    #           owner: context.repo.owner,
+    #           repo: context.repo.repo,
+    #           comment_id: existingComment.id,
+    #           body: fullComment,
+    #         });
+    #       } else {
+    #         await github.rest.issues.createComment({
+    #           issue_number: context.issue.number,
+    #           owner: context.repo.owner,
+    #           repo: context.repo.repo,
+    #           body: fullComment,
+    #         });
+    #       }
