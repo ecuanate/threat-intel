@@ -98,8 +98,8 @@ jobs:
       if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
       run: terraform apply -auto-approve
 
-    - name: Print Assumed Role
-      run: aws sts get-caller-identity    
+    # - name: Print Assumed Role
+    #   run: aws sts get-caller-identity    
 
     - name: Create Summary Comment
       uses: actions/github-script@v6
