@@ -73,22 +73,10 @@ jobs:
         git config user.name "${{ secrets.USER_NAME }}"
         git config user.email "${{ secrets.USER_EMAIL }}"
         git config commit.gpgSign true
-
-        # 1. Create the ~/.gnupg directory if missing, and set correct permissions
-        mkdir -p ~/.gnupg
-        chmod 700 ~/.gnupg
-
-        # 2. Append pinentry-mode to gpg.conf so GPG can accept passphrase via loopback
-        echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-
-        # 3. Import your GPG private key in loopback mode
-        echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --import
-
-        # 4. Retrieve the key ID, then configure Git to sign with that key
-        GPG_KEY_ID="$(gpg --list-secret-keys --keyid-format=long | grep sec | head -n 1 | awk '{print $2}' | cut -d'/' -f2)"
-        git config user.signingkey "${GPG_KEY_ID}"
-
-
+        echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+        gpg --batch --list-keys
+        git config user.signingkey "$(gpg --batch --list-secret-keys --keyid-format=long | grep sec | head -n 1 | awk '{print $2}' | cut -d'/' -f2)"
+    
     - name: Commit changes
       run: |
         # Ensure the .git directory is writable and reset ownership
