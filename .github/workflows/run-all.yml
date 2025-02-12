@@ -89,7 +89,7 @@ jobs:
         if git diff --cached --quiet; then
           echo "No changes detected. Skipping commit."
         else
-          git commit -S -m "Update plans and docs"
+          git commit -S -m "Update plans and docs - Service Account Placeholder"
           git push origin HEAD
         fi
 
