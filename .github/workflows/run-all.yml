@@ -101,7 +101,7 @@ jobs:
     # - name: Print Assumed Role
     #   run: aws sts get-caller-identity    
 
-    - name: Create Summary Comment
+    # - name: Create Summary Comment
       uses: actions/github-script@v6
       if: github.event_name == 'pull_request'
       env:
