@@ -19,4 +19,5 @@ variable "key_name" {
   description = "AWS Secret Key"
   type        = string
   sensitive   = true
+  default = "terraform_pem"
 }
