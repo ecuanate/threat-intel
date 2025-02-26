@@ -138,11 +138,11 @@ jobs:
             };
           }
 
-          let fullComment = ### ${summaryTitle}\n\n;
+          let fullComment = `### ${summaryTitle}\n\n`;
 
           if (!fs.existsSync(planFilePath)) {
-            console.warn(Plan file not found: ${planFilePath});
-            fullComment += **Plan File:** *Plan file not found.*\n\n;
+            console.warn(`Plan file not found: ${planFilePath}`);
+            fullComment += "**Plan File:** *Plan file not found.*\n\n";
           } else {
             const planContent = fs.readFileSync(planFilePath, 'utf8');
             const truncatedPlan = planContent.length > 65000
@@ -151,23 +151,18 @@ jobs:
 
             const counts = extractCounts(planContent);
 
-            const summary = \\\
-            Create: ${counts.create}
-            Update: ${counts.update}
-            Delete: ${counts.delete}
-            \\\
-            ;
-
-            fullComment += ${summary}\n<details><summary>Show Plan Details</summary>\n\n\\\\n${truncatedPlan}\n\\\\n</details>\n;
+            const summary = `Create: ${counts.create}\nUpdate: ${counts.update}\nDelete: ${counts.delete}\n`;
+            
+            fullComment += `${summary}\n<details><summary>Show Plan Details</summary>\n\n\\n${truncatedPlan}\n\\n</details>\n`;
           }
 
-          const runUrl = ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID};
-          const runLink = <a href="${runUrl}">View full logs here</a>;
+          const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const runLink = `<a href="${runUrl}">View full logs here</a>`;
           const truncatedMessage = fullComment.length > 65000
-            ? Some plan outputs were truncated. ${runLink}<br /><br />
+            ? `Some plan outputs were truncated. ${runLink}<br /><br />`
             : "";
 
-          fullComment += ${truncatedMessage}\n*Pusher: @${context.actor}, Action: \${context.eventName}\, Workflow: \${context.workflow}\*\n\n<!-- terraform-summary-comment -->;
+          fullComment += `${truncatedMessage}\n*Pusher: @${context.actor}, Action: ${context.eventName}, Workflow: ${context.workflow}*\n\n<!-- terraform-summary-comment -->`;
 
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
