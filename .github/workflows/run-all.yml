@@ -50,14 +50,17 @@ jobs:
     #   id: validate
 
     - name: Terraform Plan
-      env:
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
       run: |
-        terraform plan -out=tfplan.tmp -var "key_name=${{ secrets.KEY_NAME }}"
+        terraform plan -out=tfplan.tmp \
+          -var "aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+          -var "aws_secret_key=${{ secrets.AWS_SECRET_KEY }}" \
+          -var "aws_region=${{ secrets.AWS_REGION }}" \
+          -var "key_name=${{ secrets.KEY_NAME }}"
         terraform show -no-color tfplan.tmp > tfplan.out
-      id: plan 
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+        AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
     - name: Render All Environments Terraform Docs
       uses: terraform-docs/gh-actions@main
@@ -98,7 +101,11 @@ jobs:
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-      run: terraform apply -auto-approve -var "key_name=${{ secrets.KEY_NAME }}"
+      run: terraform apply -auto-approve \
+          -var "aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+          -var "aws_secret_key=${{ secrets.AWS_SECRET_KEY }}" \
+          -var "aws_region=${{ secrets.AWS_REGION }}" \
+          -var "key_name=${{ secrets.KEY_NAME }}"
 
     # - name: Print Assumed Role
     #   run: aws sts get-caller-identity    
