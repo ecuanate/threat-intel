@@ -95,6 +95,13 @@ jobs:
           git push origin HEAD
         fi
 
+    - name: Terraform Import key
+      run: terraform import aws_key_pair.key_pair_terraform terraform_key \
+        -var "aws_access_key=${{ secrets.AWS_ACCESS_KEY }}" \
+        -var "aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+        -var "aws_region=${{ secrets.AWS_REGION }}" \
+        -var "key_name=${{ secrets.AWS_KEY_NAME }}"
+
     - name: Terraform Apply
       # if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
       env:
@@ -102,7 +109,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
       run: | 
-        terraform import aws_key_pair.key_pair_terraform ${{ secrets.AWS_KEY_NAME }} \
         terraform apply -auto-approve \
         -var "aws_access_key=${{ secrets.AWS_ACCESS_KEY }}" \
         -var "aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
