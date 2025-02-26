@@ -23,7 +23,6 @@ No modules.
 | Name | Type |
 |------|------|
 | [aws_instance.web](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance) | resource |
-| [aws_key_pair.key_pair_terraform](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/key_pair) | resource |
 | [local_file.private_key](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
 | [tls_private_key.rsa_4096_terraform](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key) | resource |
 
