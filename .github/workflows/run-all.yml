@@ -50,12 +50,12 @@ jobs:
     #   id: validate
 
     - name: Terraform Plan
+      env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
       run: |
-        terraform plan -out=tfplan.tmp \
-            -var "aws_access_key=${{ secrets.AWS_ACCESS_KEY }}" \
-            -var "aws_secret_key=${{ secrets.AWS_SECRET_KEY }}" \
-            -var "aws_region=${{ secrets.AWS_REGION }}"
-            -var "aws_region=${{ secrets.AWS_KEY_NAME }}"
+        terraform plan -out=tfplan.tmp -var "key_name=${{ secrets.KEY_NAME }}"
         terraform show -no-color tfplan.tmp > tfplan.out
       id: plan 
 
@@ -94,11 +94,11 @@ jobs:
 
     - name: Terraform Apply
       if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
-      run: terraform apply -auto-approve \
-            -var "aws_access_key=${{ secrets.AWS_ACCESS_KEY }}" \
-            -var "aws_secret_key=${{ secrets.AWS_SECRET_KEY }}" \
-            -var "aws_region=${{ secrets.AWS_REGION }}"
-            -var "aws_region=${{ secrets.AWS_KEY_NAME }}"
+      env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+      run: terraform apply -auto-approve -var "key_name=${{ secrets.KEY_NAME }}"
 
     # - name: Print Assumed Role
     #   run: aws sts get-caller-identity    
