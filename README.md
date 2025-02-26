@@ -34,7 +34,7 @@ No modules.
 | <a name="input_aws_access_key"></a> [aws\_access\_key](#input\_aws\_access\_key) | AWS Access Key | `string` | n/a | yes |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | The AWS region | `string` | `"us-east-1"` | no |
 | <a name="input_aws_secret_key"></a> [aws\_secret\_key](#input\_aws\_secret\_key) | AWS Secret Key | `string` | n/a | yes |
-| <a name="input_key_name"></a> [key\_name](#input\_key\_name) | AWS Secret Key | `string` | n/a | yes |
+| <a name="input_key_name"></a> [key\_name](#input\_key\_name) | AWS Key Name | `string` | n/a | yes |
 
 ## Outputs
 
