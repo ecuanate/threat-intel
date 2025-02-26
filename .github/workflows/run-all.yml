@@ -36,7 +36,7 @@ jobs:
     - name: Terraform Init
       env:
         AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
         AWS_KEY_NAME: ${{ secrets.AWS_KEY_NAME }}"
       run: terraform init
@@ -52,7 +52,7 @@ jobs:
     - name: Terraform Plan
       env:
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
       run: |
         terraform plan -out=tfplan.tmp -var "key_name=${{ secrets.KEY_NAME }}"
