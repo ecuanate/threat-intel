@@ -31,7 +31,7 @@ provider "aws" {
 resource "aws_instance" "web" {
   ami           = "ami-04b4f1a9cf54c11d0"
   instance_type = "t2.micro"
-  key_name = aws_key_pair.key_pair_terraform.key_name
+  key_name = var.key_name
   tags = {
     Name = "terraform_instance"
   }
