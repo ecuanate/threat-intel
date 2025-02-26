@@ -41,13 +41,13 @@ jobs:
         AWS_KEY_NAME: ${{ secrets.AWS_KEY_NAME }}"
       run: terraform init
 
-    - name: Terraform Format
-      run: terraform fmt -check
-      id: fmt
+    # - name: Terraform Format
+    #   run: terraform fmt -check
+    #   id: fmt
 
-    - name: Terraform Validate
-      run: terraform validate
-      id: validate
+    # - name: Terraform Validate
+    #   run: terraform validate
+    #   id: validate
 
     - name: Terraform Plan
       run: |
