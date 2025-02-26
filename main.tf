@@ -12,10 +12,10 @@ resource "tls_private_key" "rsa_4096_terraform" {
   rsa_bits  = 4096
 }
 
-resource "aws_key_pair" "key_pair_terraform" {
-  key_name   = var.key_name
-  public_key = tls_private_key.rsa_4096_terraform.public_key_openssh
-  }
+# resource "aws_key_pair" "key_pair_terraform" {
+#   key_name   = var.key_name
+#   public_key = tls_private_key.rsa_4096_terraform.public_key_openssh
+#   }
 
 resource "local_file" "private_key" {
   content = tls_private_key.rsa_4096_terraform.private_key_pem
